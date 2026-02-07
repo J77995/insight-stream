@@ -183,10 +183,18 @@ class YouTubeService:
             
             logger.info(f"Caption URL: {caption_url[:100]}...")
             
-            # Fetch caption data directly (not through ScraperAPI)
-            # Caption URLs are usually public and don't need proxy
+            # Fetch caption data directly with proper headers
+            # Caption URLs require specific headers to work
+            caption_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9,ko;q=0.8',
+                'Referer': f'https://www.youtube.com/watch?v={video_id}',
+                'Origin': 'https://www.youtube.com',
+            }
+            
             try:
-                caption_response = requests.get(caption_url, timeout=10)
+                caption_response = requests.get(caption_url, headers=caption_headers, timeout=10)
                 
                 if caption_response.status_code != 200:
                     logger.error(f"Failed to fetch caption data: HTTP {caption_response.status_code}")
