@@ -249,14 +249,11 @@ class YouTubeService:
                 # Continue to fallback method below
         
         # Fallback to standard youtube-transcript-api method
-        fetch_kwargs = {}
-        if self._cookies:
-            fetch_kwargs['cookies'] = self._cookies
-        
+        # Note: youtube-transcript-api doesn't support cookies parameter
         try:
             # Try Korean first
             try:
-                fetched = self._api.fetch(video_id, languages=['ko'], **fetch_kwargs)
+                fetched = self._api.fetch(video_id, languages=['ko'])
                 transcript = fetched.to_raw_data()
                 logger.info(f"✅ Successfully fetched Korean transcript for {video_id}")
                 return transcript
@@ -267,7 +264,7 @@ class YouTubeService:
 
             # Try English
             try:
-                fetched = self._api.fetch(video_id, languages=['en'], **fetch_kwargs)
+                fetched = self._api.fetch(video_id, languages=['en'])
                 transcript = fetched.to_raw_data()
                 logger.info(f"✅ Successfully fetched English transcript for {video_id}")
                 return transcript
@@ -278,7 +275,7 @@ class YouTubeService:
 
             # Try any available transcript
             try:
-                transcript_list = self._api.list(video_id, **fetch_kwargs)
+                transcript_list = self._api.list(video_id)
 
                 # Try to find any transcript
                 for transcript_info in transcript_list:
