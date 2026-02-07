@@ -180,8 +180,12 @@ class YouTubeService:
             if not caption_url:
                 raise NoTranscriptFound(video_id, [], None)
             
-            # Fetch caption data
-            caption_response = requests.get(caption_url, timeout=10)
+            # Fetch caption data through ScraperAPI
+            caption_params = {
+                'api_key': self._scraperapi_key,
+                'url': caption_url,
+            }
+            caption_response = requests.get(scraperapi_url, params=caption_params, timeout=10)
             
             if caption_response.status_code != 200:
                 raise Exception(f"Failed to fetch caption data: {caption_response.status_code}")
