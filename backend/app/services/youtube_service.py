@@ -114,12 +114,116 @@ class YouTubeService:
         
         return f'YouTube Video ({video_id})'
 
+    def _fetch_transcript_with_scraperapi(self, video_id: str) -> list:
+        """
+        Fetch transcript using ScraperAPI (direct method).
+        
+        Args:
+            video_id: YouTube video ID
+            
+        Returns:
+            List of transcript entries
+            
+        Raises:
+            Exception: If transcript fetching fails
+        """
+        import requests
+        import re
+        import json
+        
+        logger.info(f"🔒 Using ScraperAPI for {video_id}")
+        
+        # Use ScraperAPI to fetch YouTube page
+        scraperapi_url = "http://api.scraperapi.com"
+        params = {
+            'api_key': self._scraperapi_key,
+            'url': f'https://www.youtube.com/watch?v={video_id}',
+            'render': 'false',  # No JavaScript rendering needed
+        }
+        
+        try:
+            response = requests.get(scraperapi_url, params=params, timeout=30)
+            
+            if response.status_code != 200:
+                raise Exception(f"ScraperAPI returned status {response.status_code}")
+            
+            html = response.text
+            
+            # Extract caption tracks from HTML
+            if 'captionTracks' not in html:
+                raise NoTranscriptFound(video_id, [], None)
+            
+            # Find captionTracks JSON
+            pattern = r'"captionTracks":\s*(\[.*?\])'
+            match = re.search(pattern, html)
+            
+            if not match:
+                raise NoTranscriptFound(video_id, [], None)
+            
+            caption_tracks = json.loads(match.group(1))
+            
+            # Find Korean or English caption
+            caption_url = None
+            for track in caption_tracks:
+                lang = track.get('languageCode', '')
+                if lang in ['ko', 'en']:
+                    caption_url = track.get('baseUrl')
+                    logger.info(f"Found {lang} caption track")
+                    break
+            
+            if not caption_url:
+                # Try first available caption
+                if caption_tracks:
+                    caption_url = caption_tracks[0].get('baseUrl')
+                    logger.info(f"Using first available caption")
+            
+            if not caption_url:
+                raise NoTranscriptFound(video_id, [], None)
+            
+            # Fetch caption data
+            caption_response = requests.get(caption_url, timeout=10)
+            
+            if caption_response.status_code != 200:
+                raise Exception(f"Failed to fetch caption data: {caption_response.status_code}")
+            
+            # Parse caption XML
+            caption_xml = caption_response.text
+            
+            # Extract text from XML
+            text_pattern = r'<text start="([\d.]+)" dur="([\d.]+)"[^>]*>(.*?)</text>'
+            matches = re.findall(text_pattern, caption_xml, re.DOTALL)
+            
+            transcript = []
+            for start, duration, text in matches:
+                # Unescape HTML entities
+                text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"').replace('&#39;', "'")
+                # Remove HTML tags
+                text = re.sub(r'<[^>]+>', '', text)
+                text = text.strip()
+                
+                if text:
+                    transcript.append({
+                        'text': text,
+                        'start': float(start),
+                        'duration': float(duration)
+                    })
+            
+            if not transcript:
+                raise NoTranscriptFound(video_id, [], None)
+            
+            logger.info(f"✅ Successfully fetched transcript via ScraperAPI: {len(transcript)} entries")
+            return transcript
+            
+        except Exception as e:
+            logger.error(f"❌ ScraperAPI method failed: {str(e)}")
+            raise
+
     def get_transcript(self, video_id: str) -> list:
         """
         Fetch transcript for a YouTube video with enhanced anti-blocking measures.
 
         Tries languages in this order: Korean → English → any available
-        If ScraperAPI is configured, uses it as a proxy for anti-blocking.
+        If ScraperAPI is configured, uses it directly for anti-blocking.
 
         Args:
             video_id: YouTube video ID
@@ -136,18 +240,17 @@ class YouTubeService:
             VideoUnplayable: When video cannot be played
             Exception: For other transcript-related errors
         """
-        # Prepare fetch kwargs
-        fetch_kwargs = {}
-        
-        # Use ScraperAPI if available (preferred method)
+        # Try ScraperAPI first if available (most reliable)
         if self._scraperapi_key:
-            logger.info(f"🔒 Using ScraperAPI for {video_id}")
-            # Set proxy through environment variables (youtube-transcript-api uses requests internally)
-            import os
-            proxy = f"http://scraperapi:{self._scraperapi_key}@proxy-server.scraperapi.com:8001"
-            os.environ['HTTP_PROXY'] = proxy
-            os.environ['HTTPS_PROXY'] = proxy
-        elif self._cookies:
+            try:
+                return self._fetch_transcript_with_scraperapi(video_id)
+            except Exception as e:
+                logger.warning(f"⚠️ ScraperAPI method failed, falling back to standard method: {str(e)}")
+                # Continue to fallback method below
+        
+        # Fallback to standard youtube-transcript-api method
+        fetch_kwargs = {}
+        if self._cookies:
             fetch_kwargs['cookies'] = self._cookies
         
         try:
@@ -193,20 +296,13 @@ class YouTubeService:
 
             except RequestBlocked as e:
                 logger.error(f"❌ YouTube blocked all requests for {video_id}")
-                raise RequestBlocked(
-                    video_id,
-                    "YouTube가 요청을 차단했습니다. 잠시 후 다시 시도하거나 다른 영상을 시도해주세요."
-                )
+                raise Exception("YouTube가 요청을 차단했습니다. 잠시 후 다시 시도하거나 다른 영상을 시도해주세요.")
             except Exception as e:
                 logger.error(f"❌ Failed to fetch any transcript for {video_id}: {str(e)}")
                 raise
-        finally:
-            # Clean up proxy environment variables if ScraperAPI was used
-            if self._scraperapi_key:
-                if 'HTTP_PROXY' in os.environ:
-                    del os.environ['HTTP_PROXY']
-                if 'HTTPS_PROXY' in os.environ:
-                    del os.environ['HTTPS_PROXY']
+        except Exception as e:
+            logger.error(f"❌ All transcript fetching methods failed for {video_id}")
+            raise
 
     def format_transcript(self, transcript_list: list) -> str:
         """
