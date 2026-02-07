@@ -297,6 +297,34 @@ To switch between AI providers:
 2. Ensure the corresponding API key is set
 3. Restart the server
 
+### YouTube "Request Blocked" Errors
+
+If you encounter "YouTube가 요청을 차단했습니다" errors (especially on Vercel or serverless platforms):
+
+**Quick Fix (Optional YouTube Cookies):**
+
+1. Get YouTube cookies from your browser:
+   - Open YouTube in browser (logged in)
+   - Press F12 → Application tab → Cookies → youtube.com
+   - Copy cookie values (especially `CONSENT`, `VISITOR_INFO1_LIVE`, `YSC`)
+
+2. Add to `.env`:
+```bash
+YOUTUBE_COOKIES="CONSENT=YES+...; VISITOR_INFO1_LIVE=...; YSC=..."
+```
+
+3. Add to Vercel Environment Variables (if deploying to Vercel):
+   - Settings → Environment Variables
+   - Name: `YOUTUBE_COOKIES`
+   - Value: (paste your cookies)
+
+**Note:** Cookies may expire and need periodic updates.
+
+**Alternative Solutions:**
+- Use a dedicated server (Railway, Render, Fly.io) instead of serverless
+- Implement rate limiting to avoid triggering YouTube's anti-bot measures
+- Consider using `yt-dlp` library as a more robust alternative
+
 ## License
 
 This project is part of the Insight Stream application.

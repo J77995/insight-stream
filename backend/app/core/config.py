@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     TRANSCRIPT_LIMIT_OVERVIEW: int = 8000
     TRANSCRIPT_LIMIT_DETAIL: int = 50000
 
+    # YouTube API (optional for anti-blocking)
+    YOUTUBE_COOKIES: str = ""  # Optional: YouTube cookies for better access
+
     # Translation Models (cost-optimized)
     GEMINI_TRANSLATION_MODEL: str = "gemini-1.5-flash"
     OPENAI_TRANSLATION_MODEL: str = "gpt-4o-mini"

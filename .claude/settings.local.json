@@ -4,7 +4,20 @@
       "Bash(tree:*)",
       "Bash(python -m py_compile:*)",
       "Bash(source:*)",
-      "Bash(python -m uvicorn:*)"
+      "Bash(python -m uvicorn:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth status:*)",
+      "Bash(where:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/GitHub CLI:$PATH\")",
+      "Bash(gh auth login:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\workspace"
     ]
   }
 }
