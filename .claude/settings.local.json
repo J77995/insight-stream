@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(source:*)",
+      "Bash(python -m uvicorn:*)"
+    ]
+  }
+}
