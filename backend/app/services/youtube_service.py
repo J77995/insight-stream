@@ -188,14 +188,21 @@ class YouTubeService:
             caption_response = requests.get(scraperapi_url, params=caption_params, timeout=10)
             
             if caption_response.status_code != 200:
+                logger.error(f"Failed to fetch caption data: HTTP {caption_response.status_code}")
                 raise Exception(f"Failed to fetch caption data: {caption_response.status_code}")
             
             # Parse caption XML
             caption_xml = caption_response.text
+            logger.info(f"Caption XML length: {len(caption_xml)} bytes")
+            
+            # Log first 500 chars for debugging
+            logger.debug(f"Caption XML preview: {caption_xml[:500]}")
             
             # Extract text from XML
             text_pattern = r'<text start="([\d.]+)" dur="([\d.]+)"[^>]*>(.*?)</text>'
             matches = re.findall(text_pattern, caption_xml, re.DOTALL)
+            
+            logger.info(f"Found {len(matches)} caption entries via regex")
             
             transcript = []
             for start, duration, text in matches:
@@ -213,6 +220,7 @@ class YouTubeService:
                     })
             
             if not transcript:
+                logger.error(f"No transcript entries extracted from XML")
                 raise NoTranscriptFound(video_id, [], None)
             
             logger.info(f"✅ Successfully fetched transcript via ScraperAPI: {len(transcript)} entries")
