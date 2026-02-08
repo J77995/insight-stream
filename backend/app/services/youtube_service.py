@@ -23,25 +23,23 @@ class YouTubeService:
     """Service for handling YouTube video transcript extraction."""
 
     def __init__(self):
-        """Initialize YouTube API client with cookies and ScraperAPI support."""
+        """Initialize YouTube API client with ScraperAPI support."""
         # Get cookies from settings (optional)
         self._cookies = settings.YOUTUBE_COOKIES if settings.YOUTUBE_COOKIES else None
         
         # Get ScraperAPI key from settings (optional, for anti-blocking)
         self._scraperapi_key = settings.SCRAPERAPI_KEY if settings.SCRAPERAPI_KEY else None
         
-        # Configure YouTube API with or without proxy
+        # Configure proxy if ScraperAPI is available
         if self._scraperapi_key:
-            # ScraperAPI proxy configuration
             proxy_url = f'http://scraperapi:{self._scraperapi_key}@proxy-server.scraperapi.com:8001'
-            proxy_config = GenericProxyConfig(
+            self._proxy_config = GenericProxyConfig(
                 http_url=proxy_url,
                 https_url=proxy_url
             )
-            self._api = YouTubeTranscriptApi(proxy_config=proxy_config)
             logger.info("✅ ScraperAPI configured - anti-blocking enabled")
         else:
-            self._api = YouTubeTranscriptApi()
+            self._proxy_config = None
             if self._cookies:
                 logger.info("YouTube cookies configured for transcript fetching")
             else:
@@ -144,7 +142,7 @@ class YouTubeService:
         Fetch transcript for a YouTube video with enhanced anti-blocking measures.
 
         Tries languages in this order: Korean → English → any available
-        If ScraperAPI is configured, uses it automatically via proxy_config.
+        If ScraperAPI is configured, uses it via proxy_config.
 
         Args:
             video_id: YouTube video ID
@@ -161,10 +159,16 @@ class YouTubeService:
             VideoUnplayable: When video cannot be played
             Exception: For other transcript-related errors
         """
+        # Create API instance with or without proxy
+        if self._proxy_config:
+            api = YouTubeTranscriptApi(http_client=None, proxy_config=self._proxy_config)
+        else:
+            api = YouTubeTranscriptApi()
+        
         try:
             # Try Korean first
             try:
-                transcript_list = self._api.list_transcripts(video_id)
+                transcript_list = api.list_transcripts(video_id)
                 transcript = transcript_list.find_transcript(['ko'])
                 result = transcript.fetch()
                 logger.info(f"✅ Successfully fetched Korean transcript for {video_id}")
@@ -176,7 +180,7 @@ class YouTubeService:
 
             # Try English
             try:
-                transcript_list = self._api.list_transcripts(video_id)
+                transcript_list = api.list_transcripts(video_id)
                 transcript = transcript_list.find_transcript(['en'])
                 result = transcript.fetch()
                 logger.info(f"✅ Successfully fetched English transcript for {video_id}")
@@ -188,7 +192,7 @@ class YouTubeService:
 
             # Try any available transcript
             try:
-                transcript_list = self._api.list_transcripts(video_id)
+                transcript_list = api.list_transcripts(video_id)
                 
                 # Try to find any transcript
                 for transcript_info in transcript_list:
