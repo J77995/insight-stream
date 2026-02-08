@@ -206,46 +206,16 @@ class YouTubeService:
             
             logger.info(f"Caption URL: {caption_url[:100]}...")
             
-            # Fetch caption data directly with proper headers
-            # Caption URLs require specific headers to work
-            caption_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-                'Accept-Language': 'en-US,en;q=0.9,ko;q=0.8',
-                'Referer': f'https://www.youtube.com/watch?v={video_id}',
-                'Origin': 'https://www.youtube.com',
+            # ALWAYS use ScraperAPI for caption URL (YouTube blocks direct requests from cloud IPs)
+            logger.info(f"Fetching caption data via ScraperAPI...")
+            caption_params = {
+                'api_key': self._scraperapi_key,
+                'url': caption_url,
             }
+            caption_response = requests.get(scraperapi_url, params=caption_params, timeout=30)
             
-            try:
-                caption_response = requests.get(caption_url, headers=caption_headers, timeout=10)
-                
-                if caption_response.status_code != 200:
-                    logger.error(f"Failed to fetch caption data: HTTP {caption_response.status_code}")
-                    # Retry through ScraperAPI
-                    caption_params = {
-                        'api_key': self._scraperapi_key,
-                        'url': caption_url,
-                    }
-                    caption_response = requests.get(scraperapi_url, params=caption_params, timeout=10)
-                    
-                    if caption_response.status_code != 200:
-                        raise Exception(f"Failed to fetch caption data: {caption_response.status_code}")
-                    logger.info(f"Caption fetched via ScraperAPI fallback")
-                else:
-                    logger.info(f"Caption fetched directly")
-                    
-            except Exception as e:
-                logger.error(f"Direct caption fetch failed: {str(e)}")
-                # Try ScraperAPI as fallback
-                caption_params = {
-                    'api_key': self._scraperapi_key,
-                    'url': caption_url,
-                }
-                caption_response = requests.get(scraperapi_url, params=caption_params, timeout=10)
-                
-                if caption_response.status_code != 200:
-                    raise Exception(f"Failed to fetch caption data via ScraperAPI: {caption_response.status_code}")
-                logger.info(f"Caption fetched via ScraperAPI after direct failure")
+            if caption_response.status_code != 200:
+                raise Exception(f"Failed to fetch caption data via ScraperAPI: HTTP {caption_response.status_code}")
             
             # Parse caption XML
             caption_xml = caption_response.text
