@@ -173,7 +173,8 @@ class YouTubeService:
         try:
             # Try Korean first
             try:
-                transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies, languages=['ko'])
+                transcript_dict = YouTubeTranscriptApi.get_transcripts([video_id], languages=['ko'], proxies=proxies)
+                transcript = transcript_dict[video_id]
                 logger.info(f"✅ Successfully fetched Korean transcript for {video_id}")
                 return transcript
             except (NoTranscriptFound, TranscriptsDisabled) as e:
@@ -183,7 +184,8 @@ class YouTubeService:
 
             # Try English
             try:
-                transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies, languages=['en'])
+                transcript_dict = YouTubeTranscriptApi.get_transcripts([video_id], languages=['en'], proxies=proxies)
+                transcript = transcript_dict[video_id]
                 logger.info(f"✅ Successfully fetched English transcript for {video_id}")
                 return transcript
             except (NoTranscriptFound, TranscriptsDisabled) as e:
@@ -193,7 +195,8 @@ class YouTubeService:
 
             # Try any available transcript (no language filter)
             try:
-                transcript = YouTubeTranscriptApi.get_transcript(video_id, proxies=proxies)
+                transcript_dict = YouTubeTranscriptApi.get_transcripts([video_id], proxies=proxies)
+                transcript = transcript_dict[video_id]
                 logger.info(f"✅ Successfully fetched transcript for {video_id}")
                 return transcript
             except RequestBlocked as e:
