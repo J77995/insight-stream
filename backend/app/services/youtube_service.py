@@ -12,8 +12,8 @@ from youtube_transcript_api._errors import (
 )
 from urllib.parse import urlparse, parse_qs
 import logging
-import os
 import re
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +25,11 @@ class YouTubeService:
         """Initialize YouTube API client with cookies and ScraperAPI support."""
         self._api = YouTubeTranscriptApi()
         
-        # Get cookies from environment variable (optional)
-        self._cookies = os.getenv('YOUTUBE_COOKIES', None)
+        # Get cookies from settings (optional)
+        self._cookies = settings.YOUTUBE_COOKIES if settings.YOUTUBE_COOKIES else None
         
-        # Get ScraperAPI key (optional, for anti-blocking)
-        self._scraperapi_key = os.getenv('SCRAPERAPI_KEY', None)
+        # Get ScraperAPI key from settings (optional, for anti-blocking)
+        self._scraperapi_key = settings.SCRAPERAPI_KEY if settings.SCRAPERAPI_KEY else None
         
         # Set User-Agent to mimic real browser
         self._headers = {
