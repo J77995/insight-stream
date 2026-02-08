@@ -18,23 +18,15 @@ class Settings(BaseSettings):
 
     # CORS
     FRONTEND_URL: str = "http://localhost:8080"
-    ALLOWED_ORIGINS_STR: str = ""  # Comma-separated list of additional allowed origins
 
     @property
     def ALLOWED_ORIGINS(self) -> List[str]:
         """List of allowed origins for CORS."""
-        origins = [
+        return [
             self.FRONTEND_URL,
             "http://localhost:8080",
             "http://localhost:5173"
         ]
-
-        # Add additional origins from environment variable
-        if self.ALLOWED_ORIGINS_STR:
-            additional = [origin.strip() for origin in self.ALLOWED_ORIGINS_STR.split(",")]
-            origins.extend(additional)
-
-        return origins
 
     # AI Provider Selection
     AI_PROVIDER: str = "gemini"  # Options: "gemini" or "openai"
