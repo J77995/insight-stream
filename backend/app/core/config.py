@@ -56,6 +56,9 @@ class Settings(BaseSettings):
 
     # YouTube API (optional for anti-blocking)
     YOUTUBE_COOKIES: str = ""  # Optional: YouTube cookies for better access
+    
+    # ScraperAPI (required for cloud server anti-blocking)
+    SCRAPERAPI_KEY: str = ""  # Required to bypass YouTube's cloud IP blocking
 
     # Translation Models (cost-optimized)
     GEMINI_TRANSLATION_MODEL: str = "gemini-1.5-flash"
