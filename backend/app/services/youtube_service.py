@@ -351,7 +351,7 @@ class YouTubeService:
         Format transcript into timeline-based paragraphs.
 
         Groups transcript entries by 30-second intervals and formats with timestamps.
-        Sentences are kept intact within each group.
+        Sentences are kept intact within each group - won't split mid-sentence.
         Format: "mm:ss text1 text2 text3\n\nmm:ss text4 text5"
         Example: "0:05 First sentence. Second sentence.\n\n0:35 Third sentence."
 
@@ -363,35 +363,49 @@ class YouTubeService:
         """
         if not transcript_list:
             return ""
-        
+
         grouped = []
         current_group = {
             'timestamp': 0,
             'texts': []
         }
-        
+
         # Group interval in seconds (30 seconds per paragraph)
         GROUP_INTERVAL = 30
-        
-        for entry in transcript_list:
+
+        # Sentence-ending punctuation
+        SENTENCE_ENDERS = ('.', '!', '?', '...', '。', '！', '？')
+
+        for i, entry in enumerate(transcript_list):
             start_time = entry['start']
             text = entry['text'].strip()
-            
+
             # Skip empty texts
             if not text:
                 continue
-            
-            # Check if we need a new group
-            if not current_group['texts'] or start_time - current_group['timestamp'] >= GROUP_INTERVAL:
-                if current_group['texts']:
+
+            # Add text to current group
+            current_group['texts'].append(text)
+
+            # Check if we should start a new group
+            time_exceeded = start_time - current_group['timestamp'] >= GROUP_INTERVAL
+
+            if time_exceeded and current_group['texts']:
+                # Check if current text ends with sentence-ending punctuation
+                ends_with_sentence = text.endswith(SENTENCE_ENDERS)
+
+                # Also check next entry to avoid splitting mid-sentence
+                is_last_entry = i == len(transcript_list) - 1
+
+                if ends_with_sentence or is_last_entry:
+                    # Complete sentence - safe to split here
                     grouped.append(current_group)
-                current_group = {
-                    'timestamp': start_time,
-                    'texts': [text]
-                }
-            else:
-                current_group['texts'].append(text)
-        
+                    current_group = {
+                        'timestamp': transcript_list[i + 1]['start'] if not is_last_entry else start_time,
+                        'texts': []
+                    }
+                # If not a sentence end, keep accumulating until we find one
+
         # Add the last group
         if current_group['texts']:
             grouped.append(current_group)

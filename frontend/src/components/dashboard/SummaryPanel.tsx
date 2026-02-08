@@ -164,8 +164,8 @@ const SummaryPanel = ({ title, overview, detail, category, promptsUsed, onResumm
                 <h2 className="font-semibold text-sm text-foreground mb-2">
                   핵심 요약 (Overview)
                 </h2>
-                <p className="text-xs text-foreground/90 leading-relaxed">
-                  {overview}
+                <p className="text-[13px] text-foreground/90 leading-relaxed">
+                  {parseInline(overview)}
                 </p>
               </div>
             </div>
@@ -260,12 +260,8 @@ const SummaryPanel = ({ title, overview, detail, category, promptsUsed, onResumm
   );
 };
 
-// Enhanced markdown parser with support for bold, inline code, and links
-const MarkdownContent = ({ content }: { content: string }) => {
-  const lines = content.split("\n");
-
-  // Parse inline markdown (bold, code, links)
-  const parseInline = (text: string) => {
+// Parse inline markdown (bold, code, links) - extracted for reuse
+const parseInline = (text: string) => {
     const parts: (string | JSX.Element)[] = [];
     let currentIndex = 0;
     let keyCounter = 0;
@@ -325,7 +321,11 @@ const MarkdownContent = ({ content }: { content: string }) => {
     }
 
     return parts.length > 0 ? parts : text;
-  };
+};
+
+// Enhanced markdown parser with support for bold, inline code, and links
+const MarkdownContent = ({ content }: { content: string }) => {
+  const lines = content.split("\n");
 
   return (
     <div className="space-y-3">
@@ -354,7 +354,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
               <span className="text-muted-foreground text-xs mt-0.5 font-medium min-w-[1.2rem]">
                 {line.match(/^\d+/)?.[0]}.
               </span>
-              <span className="text-xs text-foreground/90 leading-relaxed">
+              <span className="text-[13px] text-foreground/90 leading-relaxed">
                 {parseInline(textContent)}
               </span>
             </div>
@@ -366,7 +366,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
           return (
             <div key={index} className="flex items-start gap-2 pl-1">
               <span className="text-muted-foreground text-xs mt-0.5">•</span>
-              <span className="text-xs text-foreground/90 leading-relaxed">
+              <span className="text-[13px] text-foreground/90 leading-relaxed">
                 {parseInline(textContent)}
               </span>
             </div>
@@ -375,7 +375,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
         // Blockquote: > text
         if (line.startsWith("> ")) {
           return (
-            <blockquote key={index} className="border-l-2 border-primary pl-3 py-1 text-xs italic text-foreground/80">
+            <blockquote key={index} className="border-l-2 border-primary pl-3 py-1 text-[13px] italic text-foreground/80">
               {parseInline(line.replace("> ", ""))}
             </blockquote>
           );
@@ -390,7 +390,7 @@ const MarkdownContent = ({ content }: { content: string }) => {
         }
         // Regular paragraph
         return (
-          <p key={index} className="text-xs text-foreground/90 leading-relaxed">
+          <p key={index} className="text-[13px] text-foreground/90 leading-relaxed">
             {parseInline(line)}
           </p>
         );

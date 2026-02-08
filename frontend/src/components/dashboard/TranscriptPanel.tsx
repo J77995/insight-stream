@@ -1,7 +1,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Languages } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { FileText, Languages, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useState } from "react";
 import { timestampToSeconds } from "@/utils/timeUtils";
 import { translateSegment, translateBatch } from "@/services/api";
@@ -34,6 +38,45 @@ const TranscriptPanel = ({
       const seconds = timestampToSeconds(timestamp);
       onTimestampClick(seconds);
     }
+  };
+
+  // Download transcript as TXT file
+  const handleDownloadTranscript = () => {
+    let content = "";
+
+    lines.forEach((line, index) => {
+      const match = line.match(/^(\d+:\d{2})\s+([\s\S]+)/);
+      const timestamp = match ? match[1] : "";
+      const text = match ? match[2].trim() : line;
+
+      // Add original text with timestamp
+      if (timestamp) {
+        content += `${timestamp} ${text}\n`;
+      } else {
+        content += `${text}\n`;
+      }
+
+      // Add translation if available
+      const translation = segmentTranslations.get(index);
+      if (translation) {
+        content += `번역: ${translation}\n`;
+      }
+
+      content += "\n"; // Add blank line between segments
+    });
+
+    // Create blob and download
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `transcript_${videoId}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success('스크립트가 다운로드되었습니다');
   };
 
   // Translate single segment
@@ -71,19 +114,20 @@ const TranscriptPanel = ({
   };
 
   // Translate full transcript (batch)
-  const handleTranslateFull = async (checked: boolean) => {
-    if (!checked) {
-      setShowTranslation(false);
-      setSegmentTranslations(new Map());
-      return;
-    }
-    
-    // If already fully translated, just show
+  const handleTranslateFull = async () => {
+    // If already translated, toggle visibility
     if (segmentTranslations.size === lines.length) {
-      setShowTranslation(true);
+      setShowTranslation(!showTranslation);
       return;
     }
-    
+
+    // If translations exist but incomplete, just toggle
+    if (segmentTranslations.size > 0) {
+      setShowTranslation(!showTranslation);
+      return;
+    }
+
+    // Start translation
     setIsTranslatingFull(true);
     try {
       // Extract text without timestamps
@@ -91,20 +135,20 @@ const TranscriptPanel = ({
         const match = line.match(/^(\d+:\d{2})\s+([\s\S]+)/);
         return match ? match[2].trim() : line;
       });
-      
+
       const result = await translateBatch({
         video_id: videoId,
         segments: segments,
         ai_provider: aiProvider,
         model: model,
       });
-      
+
       // Map translations to segment indices
       const newTranslations = new Map<number, string>();
       result.translations.forEach((translation, index) => {
         newTranslations.set(index, translation);
       });
-      
+
       setSegmentTranslations(newTranslations);
       setShowTranslation(true);
       toast.success('전체 번역이 완료되었습니다');
@@ -121,17 +165,50 @@ const TranscriptPanel = ({
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium text-sm">스크립트</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="font-medium text-sm hover:text-primary transition-colors cursor-pointer">
+                스크립트
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-40 p-2" align="start">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2 hover:bg-accent"
+                onClick={handleDownloadTranscript}
+              >
+                <Download className="h-4 w-4" />
+                다운로드
+              </Button>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex items-center gap-2">
-          <Languages className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">전체 번역</span>
-          <Switch
-            checked={showTranslation}
-            onCheckedChange={handleTranslateFull}
+          <Button
+            variant={showTranslation && segmentTranslations.size > 0 ? "default" : "outline"}
+            size="sm"
+            onClick={handleTranslateFull}
             disabled={isTranslatingFull}
-            className="scale-75"
-          />
+            className={`gap-1.5 h-8 text-xs transition-all ${
+              showTranslation && segmentTranslations.size > 0
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                : ''
+            }`}
+          >
+            {isTranslatingFull ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                번역 중...
+              </>
+            ) : (
+              <>
+                <Languages className="h-3.5 w-3.5" />
+                {segmentTranslations.size > 0
+                  ? (showTranslation ? '숨기기' : '보기')
+                  : '전체 번역'}
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
@@ -173,7 +250,7 @@ const TranscriptPanel = ({
                     <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                       {text}
                     </p>
-                    {hasTranslation && (
+                    {hasTranslation && showTranslation && (
                       <p className="text-sm leading-relaxed text-primary mt-2 whitespace-pre-wrap border-l-2 border-primary pl-3">
                         {segmentTranslations.get(index)}
                       </p>

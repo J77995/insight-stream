@@ -1,6 +1,6 @@
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Copy, Check, Menu, Settings } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import VideoPlayer, { VideoPlayerHandle } from "@/components/dashboard/VideoPlayer";
 import TranscriptPanel from "@/components/dashboard/TranscriptPanel";
@@ -29,6 +29,15 @@ const Dashboard = () => {
   const initialData = location.state?.videoData as VideoData | undefined;
   const [videoData, setVideoData] = useState<VideoData | undefined>(initialData);
   const videoId = searchParams.get("v") || videoData?.video_id || "";
+
+  // Save current dashboard URL to localStorage for "back to summary" button
+  useEffect(() => {
+    if (videoData?.video_id) {
+      const dashboardUrl = `/dashboard?v=${videoData.video_id}`;
+      localStorage.setItem('lastDashboardUrl', dashboardUrl);
+      localStorage.setItem('lastVideoData', JSON.stringify(videoData));
+    }
+  }, [videoData]);
 
   // Chat history management: Map<video_id, Message[]>
   const [chatHistories, setChatHistories] = useState<Map<string, Message[]>>(new Map());
@@ -65,9 +74,22 @@ const Dashboard = () => {
 
   const handleCopy = async () => {
     if (!videoData) return;
-    await navigator.clipboard.writeText(videoData.summary_overview);
+
+    // Combine title, overview, and detail for complete summary
+    const fullSummary = `${videoData.title}\n\n` +
+      `📌 핵심 요약\n${videoData.summary_overview}\n\n` +
+      `📝 상세 내용\n${videoData.summary_detail}`;
+
+    await navigator.clipboard.writeText(fullSummary);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    toast.success('전체 요약이 복사되었습니다');
+  };
+
+  const handleOpenOriginal = () => {
+    if (!videoData) return;
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoData.video_id}`;
+    window.open(youtubeUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleResummarize = async (newPrompts: { overview: string; detail: string }, signal?: AbortSignal) => {
@@ -142,7 +164,7 @@ const Dashboard = () => {
               )}
               <span className="hidden md:inline">복사</span>
             </Button>
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-2" onClick={handleOpenOriginal}>
               <ExternalLink className="h-4 w-4" />
               <span className="hidden md:inline">원본 보기</span>
             </Button>

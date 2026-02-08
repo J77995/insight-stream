@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Link2, FileText, Settings } from "lucide-react";
+import { Search, Link2, FileText, Settings, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -262,8 +262,39 @@ const Index = () => {
     return null;
   };
 
+  // Navigate back to last dashboard (if exists)
+  const handleBackToSummary = () => {
+    const lastDashboardUrl = localStorage.getItem('lastDashboardUrl');
+    const lastVideoDataStr = localStorage.getItem('lastVideoData');
+
+    if (lastDashboardUrl && lastVideoDataStr) {
+      try {
+        const lastVideoData = JSON.parse(lastVideoDataStr);
+        navigate(lastDashboardUrl, { state: { videoData: lastVideoData } });
+      } catch (error) {
+        console.error('Failed to parse video data:', error);
+        toast.error('이전 요약을 불러올 수 없습니다');
+      }
+    } else {
+      toast.info('이전 요약이 없습니다');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background via-background to-surface px-4">
+      {/* Back to Summary Button */}
+      <div className="absolute top-6 left-6">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleBackToSummary}
+          className="rounded-full bg-muted/50 hover:bg-primary hover:text-primary-foreground border-border/50 transition-all shadow-sm"
+          title="요약으로 돌아가기"
+        >
+          <ArrowRight className="h-5 w-5" />
+        </Button>
+      </div>
+
       {/* Admin Mode Button */}
       <div className="absolute top-6 right-6">
         <Button

@@ -275,27 +275,32 @@ class OpenAIService(BaseAIService):
         # Join segments with separator
         segments_text = "\n---\n".join(segments)
 
-        prompt = f"""아래 YouTube 영상 스크립트의 세그먼트들을 한국어로 번역해주세요.
+        prompt = f"""아래 영어 텍스트 세그먼트들을 한국어로 번역해주세요.
 
-[번역 원칙]
-- 각 세그먼트를 순서대로 번역
-- 원문의 의미와 맥락을 정확히 전달
-- 자연스러운 한국어 표현 사용
-- 전문 용어는 필요시 원어 병기 (예: "Machine Learning (기계학습)")
-- 대화체는 한국어 대화체로 자연스럽게 변환
-- 세그먼트 구분을 위해 각 번역 결과를 "---" 구분자로 분리
+[중요 규칙]
+1. 원문을 포함하지 말고, 번역문만 출력하세요
+2. 각 세그먼트를 순서대로 번역
+3. 번역 결과만 "---" 구분자로 분리하여 출력
+4. 원문의 의미와 맥락을 정확히 전달
+5. 자연스러운 한국어 표현 사용
+6. 전문 용어는 필요시 원어 병기 (예: "Machine Learning (기계학습)")
+7. 대화체는 한국어 대화체로 자연스럽게 변환
 
-[원문 세그먼트]
+[출력 형식 예시]
+입력: "Hello---How are you?---Thank you"
+출력: "안녕하세요---어떻게 지내세요?---감사합니다"
+
+[입력 텍스트]
 {segments_text}
 
-[번역 세그먼트]"""
+[번역 출력 (번역문만, 원문 포함하지 말 것)]"""
 
         try:
             # Use cost-optimized translation model (gpt-4o-mini)
             response = self.client.chat.completions.create(
                 model=settings.OPENAI_TRANSLATION_MODEL,
                 messages=[
-                    {"role": "system", "content": "당신은 전문 번역가입니다. 영어를 자연스러운 한국어로 번역해주세요."},
+                    {"role": "system", "content": "당신은 전문 번역가입니다. 영어를 자연스러운 한국어로 번역해주세요. 원문을 포함하지 말고 번역문만 출력하세요."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
