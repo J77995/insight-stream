@@ -2,6 +2,7 @@
 YouTube service for extracting and processing video transcripts.
 """
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
 from youtube_transcript_api._errors import (
     TranscriptsDisabled,
     NoTranscriptFound,
@@ -23,27 +24,28 @@ class YouTubeService:
 
     def __init__(self):
         """Initialize YouTube API client with cookies and ScraperAPI support."""
-        self._api = YouTubeTranscriptApi()
-        
         # Get cookies from settings (optional)
         self._cookies = settings.YOUTUBE_COOKIES if settings.YOUTUBE_COOKIES else None
         
         # Get ScraperAPI key from settings (optional, for anti-blocking)
         self._scraperapi_key = settings.SCRAPERAPI_KEY if settings.SCRAPERAPI_KEY else None
         
-        # Set User-Agent to mimic real browser
-        self._headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9,ko;q=0.8',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        }
-        
+        # Configure YouTube API with or without proxy
         if self._scraperapi_key:
+            # ScraperAPI proxy configuration
+            proxy_url = f'http://scraperapi:{self._scraperapi_key}@proxy-server.scraperapi.com:8001'
+            proxy_config = GenericProxyConfig(
+                http_url=proxy_url,
+                https_url=proxy_url
+            )
+            self._api = YouTubeTranscriptApi(proxy_config=proxy_config)
             logger.info("✅ ScraperAPI configured - anti-blocking enabled")
-        elif self._cookies:
-            logger.info("YouTube cookies configured for transcript fetching")
         else:
-            logger.info("No YouTube cookies or ScraperAPI configured, using default settings")
+            self._api = YouTubeTranscriptApi()
+            if self._cookies:
+                logger.info("YouTube cookies configured for transcript fetching")
+            else:
+                logger.info("No YouTube cookies or ScraperAPI configured, using default settings")
 
     def extract_video_id(self, url: str) -> str | None:
         """
@@ -142,7 +144,7 @@ class YouTubeService:
         Fetch transcript for a YouTube video with enhanced anti-blocking measures.
 
         Tries languages in this order: Korean → English → any available
-        If ScraperAPI is configured, uses it as a proxy for youtube-transcript-api.
+        If ScraperAPI is configured, uses it automatically via proxy_config.
 
         Args:
             video_id: YouTube video ID
@@ -159,24 +161,14 @@ class YouTubeService:
             VideoUnplayable: When video cannot be played
             Exception: For other transcript-related errors
         """
-        # Configure proxies if ScraperAPI is available
-        proxies = None
-        if self._scraperapi_key:
-            logger.info(f"🔒 Using ScraperAPI as proxy for {video_id}")
-            # ScraperAPI proxy format
-            proxies = {
-                'http': f'http://scraperapi:{self._scraperapi_key}@proxy-server.scraperapi.com:8001',
-                'https': f'http://scraperapi:{self._scraperapi_key}@proxy-server.scraperapi.com:8001'
-            }
-        
-        # Use youtube-transcript-api with proxies
         try:
             # Try Korean first
             try:
-                transcript_dict = YouTubeTranscriptApi.get_transcripts([video_id], languages=['ko'], proxies=proxies)
-                transcript = transcript_dict[video_id]
+                transcript_list = self._api.list_transcripts(video_id)
+                transcript = transcript_list.find_transcript(['ko'])
+                result = transcript.fetch()
                 logger.info(f"✅ Successfully fetched Korean transcript for {video_id}")
-                return transcript
+                return result
             except (NoTranscriptFound, TranscriptsDisabled) as e:
                 logger.debug(f"Korean transcript not available: {str(e)}")
             except RequestBlocked as e:
@@ -184,21 +176,33 @@ class YouTubeService:
 
             # Try English
             try:
-                transcript_dict = YouTubeTranscriptApi.get_transcripts([video_id], languages=['en'], proxies=proxies)
-                transcript = transcript_dict[video_id]
+                transcript_list = self._api.list_transcripts(video_id)
+                transcript = transcript_list.find_transcript(['en'])
+                result = transcript.fetch()
                 logger.info(f"✅ Successfully fetched English transcript for {video_id}")
-                return transcript
+                return result
             except (NoTranscriptFound, TranscriptsDisabled) as e:
                 logger.debug(f"English transcript not available: {str(e)}")
             except RequestBlocked as e:
                 logger.warning(f"⚠️ YouTube blocked English request for {video_id}: {str(e)}")
 
-            # Try any available transcript (no language filter)
+            # Try any available transcript
             try:
-                transcript_dict = YouTubeTranscriptApi.get_transcripts([video_id], proxies=proxies)
-                transcript = transcript_dict[video_id]
-                logger.info(f"✅ Successfully fetched transcript for {video_id}")
-                return transcript
+                transcript_list = self._api.list_transcripts(video_id)
+                
+                # Try to find any transcript
+                for transcript_info in transcript_list:
+                    try:
+                        result = transcript_info.fetch()
+                        logger.info(f"✅ Successfully fetched {transcript_info.language} transcript for {video_id}")
+                        return result
+                    except Exception as e:
+                        logger.debug(f"Failed to fetch {transcript_info.language}: {str(e)}")
+                        continue
+
+                # If all attempts failed
+                raise NoTranscriptFound(video_id, [], None)
+
             except RequestBlocked as e:
                 logger.error(f"❌ YouTube blocked all requests for {video_id}")
                 raise Exception("YouTube가 요청을 차단했습니다. 잠시 후 다시 시도하거나 다른 영상을 시도해주세요.")
