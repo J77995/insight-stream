@@ -19,14 +19,13 @@ interface TranscriptPanelProps {
   onTimestampClick?: (seconds: number) => void;
 }
 
-const TranscriptPanel = ({ 
-  transcript, 
-  videoId, 
-  aiProvider, 
-  model, 
-  onTimestampClick 
+const TranscriptPanel = ({
+  transcript,
+  videoId,
+  aiProvider,
+  model,
+  onTimestampClick
 }: TranscriptPanelProps) => {
-  const [showTranslation, setShowTranslation] = useState(false);
   const [segmentTranslations, setSegmentTranslations] = useState<Map<number, string>>(new Map());
   const [translatingSegments, setTranslatingSegments] = useState<Set<number>>(new Set());
   const [isTranslatingFull, setIsTranslatingFull] = useState(false);
@@ -115,15 +114,9 @@ const TranscriptPanel = ({
 
   // Translate full transcript (batch)
   const handleTranslateFull = async () => {
-    // If already translated, toggle visibility
+    // If already translated, do nothing (translations always visible)
     if (segmentTranslations.size === lines.length) {
-      setShowTranslation(!showTranslation);
-      return;
-    }
-
-    // If translations exist but incomplete, just toggle
-    if (segmentTranslations.size > 0) {
-      setShowTranslation(!showTranslation);
+      toast.info('이미 전체 번역이 완료되었습니다');
       return;
     }
 
@@ -150,7 +143,6 @@ const TranscriptPanel = ({
       });
 
       setSegmentTranslations(newTranslations);
-      setShowTranslation(true);
       toast.success('전체 번역이 완료되었습니다');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '전체 번역 중 오류가 발생했습니다');
@@ -185,12 +177,12 @@ const TranscriptPanel = ({
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant={showTranslation && segmentTranslations.size > 0 ? "default" : "outline"}
+            variant={segmentTranslations.size === lines.length ? "default" : "outline"}
             size="sm"
             onClick={handleTranslateFull}
-            disabled={isTranslatingFull}
+            disabled={isTranslatingFull || segmentTranslations.size === lines.length}
             className={`gap-1.5 h-8 text-xs transition-all ${
-              showTranslation && segmentTranslations.size > 0
+              segmentTranslations.size === lines.length
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : ''
             }`}
@@ -203,9 +195,7 @@ const TranscriptPanel = ({
             ) : (
               <>
                 <Languages className="h-3.5 w-3.5" />
-                {segmentTranslations.size > 0
-                  ? (showTranslation ? '숨기기' : '보기')
-                  : '전체 번역'}
+                {segmentTranslations.size === lines.length ? '번역 완료' : '전체 번역'}
               </>
             )}
           </Button>
@@ -250,7 +240,7 @@ const TranscriptPanel = ({
                     <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                       {text}
                     </p>
-                    {hasTranslation && showTranslation && (
+                    {hasTranslation && (
                       <p className="text-sm leading-relaxed text-primary mt-2 whitespace-pre-wrap border-l-2 border-primary pl-3">
                         {segmentTranslations.get(index)}
                       </p>

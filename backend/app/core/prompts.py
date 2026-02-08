@@ -41,6 +41,10 @@ class PromptGenerator:
     BASE_OVERVIEW = """[ROLE]
 {role}
 
+[VIDEO METADATA]
+제목: {title}
+채널: {channel}
+
 [INPUT]
 아래에는 영상 콘텐츠의 원문 스크립트가 제공됩니다.
 (대담, 인터뷰, 패널 토론, Q&A, 강연, 발표, 세미나 등)
@@ -61,6 +65,10 @@ class PromptGenerator:
     BASE_DETAIL_DIALOGUE = """[ROLE]
 {role}
 
+[VIDEO METADATA]
+제목: {title}
+채널: {channel}
+
 [INPUT DATA]
 - 분석 대상: 제공된 대담 / 인터뷰 / 발표 스크립트
 - 목표: 독자가 영상을 시청하지 않아도
@@ -69,6 +77,10 @@ class PromptGenerator:
         ▸ 어떤 논리와 근거로
         ▸ 어떤 수준의 디테일로 논의했는지
         를 완전히 재구성할 수 있는 고밀도 리포트 작성
+
+[참고]
+- 메타데이터를 참고하여 화자 이름, 주제, 맥락을 정확히 파악하세요
+- 제목과 채널 정보를 통해 실제 화자나 발표자 이름을 추론할 수 있다면 "화자 A" 대신 실제 이름을 사용하세요
 
 [ANALYSIS PRINCIPLES — 반드시 준수]
 
@@ -179,6 +191,10 @@ class PromptGenerator:
     BASE_DETAIL_PRESENTATION = """[ROLE]
 {role}
 
+[VIDEO METADATA]
+제목: {title}
+채널: {channel}
+
 [INPUT DATA]
 - 분석 대상: 제공된 강연 / 발표 / 세미나 스크립트
 - 목표: 독자가 영상을 시청하지 않아도
@@ -187,6 +203,10 @@ class PromptGenerator:
         ▸ 어떤 논리와 근거로
         ▸ 어떤 수준의 디테일로 전개했는지
         를 완전히 재구성할 수 있는 고밀도 리포트 작성
+
+[참고]
+- 메타데이터를 참고하여 발표자 이름, 주제, 맥락을 정확히 파악하세요
+- 제목과 채널 정보를 통해 실제 발표자 이름을 추론할 수 있다면 "발표자" 대신 실제 이름을 사용하세요
 
 [ANALYSIS PRINCIPLES — 반드시 준수]
 
@@ -293,53 +313,84 @@ class PromptGenerator:
 [TARGET SCRIPT]
 {transcript}"""
 
-    def create_prompt(self, topic: str, format_type: str, transcript: str, prompt_type: str = "detail") -> str:
+    def create_prompt(
+        self,
+        topic: str,
+        format_type: str,
+        transcript: str,
+        prompt_type: str = "detail",
+        metadata: dict = None
+    ) -> str:
         """
         단순화된 프롬프트 생성
-        
+
         Args:
             topic: 주제 (general, tech, business, ai, economy, politics, daily)
             format_type: 형식 (dialogue, presentation)
             transcript: 원본 스크립트
             prompt_type: 프롬프트 유형 (overview 또는 detail)
-        
+            metadata: 영상 메타데이터 (title, channel)
+
         Returns:
             완성된 프롬프트
         """
         # 전문 분야 선택 (기본값: general)
         specialty = self.specialty_roles.get(topic, self.specialty_roles["general"])
-        
+
         # 공통 ROLE + 전문 분야 결합
         combined_role = f"{self.base_role}\n\n전문 분야: {specialty}"
-        
+
+        # 메타데이터 기본값 설정
+        if metadata is None:
+            metadata = {}
+        title = metadata.get('title', 'YouTube Video')
+        channel = metadata.get('channel', 'Unknown Channel')
+
         if prompt_type == "overview":
             # Overview는 항상 동일한 템플릿 사용
-            return self.BASE_OVERVIEW.format(role=combined_role, transcript=transcript)
+            return self.BASE_OVERVIEW.format(
+                role=combined_role,
+                title=title,
+                channel=channel,
+                transcript=transcript
+            )
         else:
             # Detail은 format_type에 따라 템플릿 선택
             if format_type == "presentation":
                 template = self.BASE_DETAIL_PRESENTATION
             else:  # dialogue 또는 기본값
                 template = self.BASE_DETAIL_DIALOGUE
-            
-            return template.format(role=combined_role, transcript=transcript)
+
+            return template.format(
+                role=combined_role,
+                title=title,
+                channel=channel,
+                transcript=transcript
+            )
 
 
-def get_modular_prompt(topic: str, format_type: str, transcript: str, prompt_type: str = "detail") -> str:
+def get_modular_prompt(
+    topic: str,
+    format_type: str,
+    transcript: str,
+    prompt_type: str = "detail",
+    metadata: dict = None
+) -> str:
     """
     PromptGenerator를 사용한 모듈형 프롬프트 생성
-    
+
     Args:
         topic: 주제 카테고리
         format_type: 형식 유형 (dialogue 또는 presentation)
-        transcript: 원본 스크립트
+        transcript: 원본 스크riprt
         prompt_type: 프롬프트 유형 (overview 또는 detail)
-    
+        metadata: 영상 메타데이터 (title, channel)
+
     Returns:
         생성된 프롬프트
     """
     generator = PromptGenerator()
-    return generator.create_prompt(topic, format_type, transcript, prompt_type)
+    return generator.create_prompt(topic, format_type, transcript, prompt_type, metadata)
 
 
 def get_all_categories() -> List[Dict[str, str]]:

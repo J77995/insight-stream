@@ -82,13 +82,20 @@ async def summarize_video(request: VideoRequest):
 
     logger.info(f"🆔 Extracted video ID: {video_id}")
 
-    # Step 2: Fetch video title
+    # Step 2: Fetch video metadata (title, channel)
     try:
-        title = youtube_service.get_video_title(video_id)
+        metadata = youtube_service.get_video_metadata(video_id)
+        title = metadata['title']
         logger.info(f"📺 Video title: {title}")
+        logger.info(f"📢 Channel: {metadata['channel']}")
     except Exception as e:
-        logger.warning(f"Failed to fetch title, using default: {str(e)}")
-        title = f"YouTube Video ({video_id})"
+        logger.warning(f"Failed to fetch metadata, using defaults: {str(e)}")
+        metadata = {
+            'title': f"YouTube Video ({video_id})",
+            'channel': 'Unknown Channel',
+            'channel_url': ''
+        }
+        title = metadata['title']
 
     # Step 3: Fetch transcript
     try:
@@ -201,8 +208,8 @@ async def summarize_video(request: VideoRequest):
         detail_transcript = raw_text[:settings.TRANSCRIPT_LIMIT_DETAIL]
 
         # Create complete prompts with transcript already embedded
-        prompt_overview = get_modular_prompt(category, format_type, overview_transcript, "overview")
-        prompt_detail = get_modular_prompt(category, format_type, detail_transcript, "detail")
+        prompt_overview = get_modular_prompt(category, format_type, overview_transcript, "overview", metadata)
+        prompt_detail = get_modular_prompt(category, format_type, detail_transcript, "detail", metadata)
 
         # Generate summaries with modular prompts
         # Pass empty string as transcript since it's already in the prompt

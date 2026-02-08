@@ -13,6 +13,7 @@ from youtube_transcript_api._errors import (
 from urllib.parse import urlparse, parse_qs
 import logging
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -92,12 +93,25 @@ class YouTubeService:
     def get_video_title(self, video_id: str) -> str:
         """
         Get video title from YouTube.
-        
+
         Args:
             video_id: YouTube video ID
-            
+
         Returns:
             Video title, or default title if fetch fails
+        """
+        metadata = self.get_video_metadata(video_id)
+        return metadata.get('title', f'YouTube Video ({video_id})')
+
+    def get_video_metadata(self, video_id: str) -> dict:
+        """
+        Get video metadata from YouTube (title, channel name).
+
+        Args:
+            video_id: YouTube video ID
+
+        Returns:
+            Dictionary with title, channel, and channel_url
         """
         try:
             # Try to fetch from oembed API (no API key needed)
@@ -108,11 +122,20 @@ class YouTubeService:
             )
             if response.status_code == 200:
                 data = response.json()
-                return data.get('title', f'YouTube Video ({video_id})')
+                return {
+                    'title': data.get('title', f'YouTube Video ({video_id})'),
+                    'channel': data.get('author_name', 'Unknown Channel'),
+                    'channel_url': data.get('author_url', ''),
+                }
         except Exception as e:
-            logger.warning(f"Failed to fetch video title for {video_id}: {str(e)}")
-        
-        return f'YouTube Video ({video_id})'
+            logger.warning(f"Failed to fetch video metadata for {video_id}: {str(e)}")
+
+        # Return default values if fetch fails
+        return {
+            'title': f'YouTube Video ({video_id})',
+            'channel': 'Unknown Channel',
+            'channel_url': '',
+        }
 
     def _fetch_transcript_with_scraperapi(self, video_id: str) -> list:
         """
@@ -425,7 +448,7 @@ class YouTubeService:
             # Combine texts into a paragraph (filter out empty strings)
             # Join with space to keep sentences flowing naturally
             combined_text = " ".join([t for t in group['texts'] if t.strip()])
-            
+
             # Only add if there's actual content
             if combined_text.strip():
                 formatted_lines.append(f"{timestamp} {combined_text}")
