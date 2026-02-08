@@ -168,11 +168,10 @@ class YouTubeService:
         try:
             # Try Korean first
             try:
-                transcript_list = api.list_transcripts(video_id)
-                transcript = transcript_list.find_transcript(['ko'])
-                result = transcript.fetch()
+                fetched = api.fetch(video_id, languages=['ko'])
+                transcript = fetched.to_raw_data()
                 logger.info(f"✅ Successfully fetched Korean transcript for {video_id}")
-                return result
+                return transcript
             except (NoTranscriptFound, TranscriptsDisabled) as e:
                 logger.debug(f"Korean transcript not available: {str(e)}")
             except RequestBlocked as e:
@@ -180,33 +179,21 @@ class YouTubeService:
 
             # Try English
             try:
-                transcript_list = api.list_transcripts(video_id)
-                transcript = transcript_list.find_transcript(['en'])
-                result = transcript.fetch()
+                fetched = api.fetch(video_id, languages=['en'])
+                transcript = fetched.to_raw_data()
                 logger.info(f"✅ Successfully fetched English transcript for {video_id}")
-                return result
+                return transcript
             except (NoTranscriptFound, TranscriptsDisabled) as e:
                 logger.debug(f"English transcript not available: {str(e)}")
             except RequestBlocked as e:
                 logger.warning(f"⚠️ YouTube blocked English request for {video_id}: {str(e)}")
 
-            # Try any available transcript
+            # Try any available language
             try:
-                transcript_list = api.list_transcripts(video_id)
-                
-                # Try to find any transcript
-                for transcript_info in transcript_list:
-                    try:
-                        result = transcript_info.fetch()
-                        logger.info(f"✅ Successfully fetched {transcript_info.language} transcript for {video_id}")
-                        return result
-                    except Exception as e:
-                        logger.debug(f"Failed to fetch {transcript_info.language}: {str(e)}")
-                        continue
-
-                # If all attempts failed
-                raise NoTranscriptFound(video_id, [], None)
-
+                fetched = api.fetch(video_id)
+                transcript = fetched.to_raw_data()
+                logger.info(f"✅ Successfully fetched transcript for {video_id}")
+                return transcript
             except RequestBlocked as e:
                 logger.error(f"❌ YouTube blocked all requests for {video_id}")
                 raise Exception("YouTube가 요청을 차단했습니다. 잠시 후 다시 시도하거나 다른 영상을 시도해주세요.")
