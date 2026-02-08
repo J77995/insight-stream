@@ -83,15 +83,19 @@ const AdminSettings = () => {
   const getModelOptions = () => {
     if (aiProvider === 'gemini') {
       return [
-        { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (기본)' },
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+        { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (기본, 빠름)' },
+        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (저비용)' },
+        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (표준)' },
+        { value: 'gemini-2.0-pro-exp', label: 'Gemini 2.0 Pro (최상위, 실험)' },
       ];
     } else {
       return [
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini (기본)' },
-        { value: 'gpt-4o', label: 'GPT-4o' },
-        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+        { value: 'gpt-4o-mini', label: 'GPT-4o Mini (기본, 저비용)' },
+        { value: 'gpt-4o', label: 'GPT-4o (표준)' },
+        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (빠름)' },
+        { value: 'gpt-4', label: 'GPT-4 (원본)' },
+        { value: 'o1-preview', label: 'o1-preview (추론 특화, 최상위)' },
+        { value: 'o1-mini', label: 'o1-mini (추론 특화, 경량)' },
       ];
     }
   };

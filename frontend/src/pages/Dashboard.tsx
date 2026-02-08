@@ -126,7 +126,7 @@ const Dashboard = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">내 지식</span>
+              <span className="text-muted-foreground">Insightfind</span>
               <span className="text-muted-foreground">/</span>
               <span className="font-medium text-foreground truncate max-w-[200px] md:max-w-none">
                 {videoData.title}

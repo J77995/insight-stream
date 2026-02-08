@@ -278,6 +278,12 @@ const Index = () => {
       </div>
 
       <div className="w-full max-w-2xl mx-auto animate-fade-in">
+        {/* Brand Name */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-primary mb-2">Insightfind</h2>
+          <p className="text-sm text-muted-foreground">AI 기반 유튜브 영상 요약 서비스</p>
+        </div>
+
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-16 tracking-tight">
           원하는 유튜브 링크를 삽입하세요
