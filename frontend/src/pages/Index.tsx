@@ -278,15 +278,16 @@ const Index = () => {
       </div>
 
       <div className="w-full max-w-2xl mx-auto animate-fade-in">
-        {/* Brand Name */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-primary mb-2">Insightfind</h2>
-          <p className="text-sm text-muted-foreground">AI 기반 유튜브 영상 요약 서비스</p>
+        {/* Brand Logo */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent py-4 tracking-tight leading-tight">
+            InsightFind
+          </h1>
         </div>
 
-        {/* Title */}
-        <h1 className="text-4xl md:text-5xl font-bold text-center text-foreground mb-16 tracking-tight">
-          원하는 유튜브 링크를 삽입하세요
+        {/* Main Title */}
+        <h1 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-16 tracking-tight">
+          영상을 요약하고 인사이트를 발견하세요
         </h1>
 
         {/* Search Form */}
@@ -295,7 +296,12 @@ const Index = () => {
           <div className="grid grid-cols-2 gap-4">
             <Select value={category} onValueChange={setCategory} disabled={isLoading}>
               <SelectTrigger className="h-14 bg-card/50 backdrop-blur-sm border-border/50 rounded-2xl shadow-apple-sm hover:shadow-apple-md transition-all glass-effect">
-                <SelectValue placeholder="카테고리 선택" />
+                <div className="flex items-center justify-center gap-2 w-full">
+                  <span className="text-primary font-semibold">주제</span>
+                  <span>
+                    {categories.find(cat => cat.category === category)?.display_name || '선택하세요'}
+                  </span>
+                </div>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {categories.map((cat) => (
@@ -308,7 +314,12 @@ const Index = () => {
 
             <Select value={formatType} onValueChange={setFormatType} disabled={isLoading}>
               <SelectTrigger className="h-14 bg-card/50 backdrop-blur-sm border-border/50 rounded-2xl shadow-apple-sm hover:shadow-apple-md transition-all glass-effect">
-                <SelectValue placeholder="유형 선택" />
+                <div className="flex items-center justify-center gap-2 w-full">
+                  <span className="text-primary font-semibold">영상 유형</span>
+                  <span>
+                    {formatType === 'dialogue' ? '대화형 (인터뷰/회의)' : '발표형 (강연/세미나)'}
+                  </span>
+                </div>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="dialogue" className="rounded-lg">대화형 (인터뷰/회의)</SelectItem>
@@ -363,11 +374,6 @@ const Index = () => {
           />
         </div>
       </div>
-
-      {/* Footer hint */}
-      <p className="absolute bottom-10 text-sm text-muted-foreground font-medium">
-        영상을 분석하고 핵심 내용을 정리해드립니다
-      </p>
 
       {/* Process Dialog */}
       <ProcessDialog
