@@ -136,13 +136,17 @@ const TranscriptPanel = ({
         model: model,
       });
 
-      // Map translations to segment indices
-      const newTranslations = new Map<number, string>();
-      result.translations.forEach((translation, index) => {
-        newTranslations.set(index, translation);
+      // Merge translations while preserving existing ones
+      setSegmentTranslations(prev => {
+        const updated = new Map(prev);
+        result.translations.forEach((translation, index) => {
+          // Only update if translation is not empty
+          if (translation && translation.trim()) {
+            updated.set(index, translation);
+          }
+        });
+        return updated;
       });
-
-      setSegmentTranslations(newTranslations);
       toast.success('전체 번역이 완료되었습니다');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '전체 번역 중 오류가 발생했습니다');

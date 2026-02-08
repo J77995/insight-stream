@@ -395,6 +395,8 @@ class YouTubeService:
 
         # Group interval in seconds (30 seconds per paragraph)
         GROUP_INTERVAL = 30
+        # Maximum group duration to prevent excessive accumulation
+        MAX_GROUP_DURATION = 45
 
         # Sentence-ending punctuation
         SENTENCE_ENDERS = ('.', '!', '?', '...', '。', '！', '？')
@@ -412,22 +414,28 @@ class YouTubeService:
 
             # Check if we should start a new group
             time_exceeded = start_time - current_group['timestamp'] >= GROUP_INTERVAL
+            max_exceeded = start_time - current_group['timestamp'] >= MAX_GROUP_DURATION
+            is_last_entry = i == len(transcript_list) - 1
 
-            if time_exceeded and current_group['texts']:
-                # Check if current text ends with sentence-ending punctuation
-                ends_with_sentence = text.endswith(SENTENCE_ENDERS)
+            # Check if current text ends with sentence-ending punctuation
+            ends_with_sentence = text.endswith(SENTENCE_ENDERS)
 
-                # Also check next entry to avoid splitting mid-sentence
-                is_last_entry = i == len(transcript_list) - 1
+            should_split = False
 
-                if ends_with_sentence or is_last_entry:
-                    # Complete sentence - safe to split here
-                    grouped.append(current_group)
-                    current_group = {
-                        'timestamp': transcript_list[i + 1]['start'] if not is_last_entry else start_time,
-                        'texts': []
-                    }
-                # If not a sentence end, keep accumulating until we find one
+            if max_exceeded or is_last_entry:
+                # Maximum time exceeded or last entry → force split
+                should_split = True
+            elif time_exceeded and ends_with_sentence:
+                # 30 seconds exceeded + sentence complete → split
+                should_split = True
+
+            if should_split and current_group['texts']:
+                grouped.append(current_group)
+                current_group = {
+                    'timestamp': transcript_list[i + 1]['start'] if not is_last_entry else start_time,
+                    'texts': []
+                }
+                # If not splitting, keep accumulating until we find a sentence end or timeout
 
         # Add the last group
         if current_group['texts']:

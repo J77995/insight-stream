@@ -270,28 +270,30 @@ class GeminiService(BaseAIService):
         if not self.is_configured:
             return ["Gemini API 키가 설정되지 않았습니다."] * len(segments)
 
-        # Join segments with separator
-        segments_text = "\n---\n".join(segments)
+        # Use unique separator that won't appear in content
+        SEPARATOR = "\n###SEGMENT###\n"
+        segments_text = SEPARATOR.join(segments)
 
-        prompt = f"""아래 영어 텍스트 세그먼트들을 한국어로 번역해주세요.
+        prompt = f"""다음 {len(segments)}개의 영어/외국어 텍스트를 한국어로 번역하세요.
 
 [중요 규칙]
-1. 원문을 포함하지 말고, 번역문만 출력하세요
-2. 각 세그먼트를 순서대로 번역
-3. 번역 결과만 "---" 구분자로 분리하여 출력
-4. 원문의 의미와 맥락을 정확히 전달
-5. 자연스러운 한국어 표현 사용
-6. 전문 용어는 필요시 원어 병기 (예: "Machine Learning (기계학습)")
-7. 대화체는 한국어 대화체로 자연스럽게 변환
+1. 각 세그먼트를 순서대로 번역
+2. 번역 결과만 출력 (원문 포함 금지)
+3. 각 번역을 정확히 "###SEGMENT###"로 구분
+4. 추가 설명이나 주석 없이 번역만 출력
+5. 입력 개수와 출력 개수를 반드시 일치시킬 것
+6. 원문의 의미와 맥락을 정확히 전달
+7. 자연스러운 한국어 표현 사용
+8. 전문 용어는 필요시 원어 병기 (예: "Machine Learning (기계학습)")
+9. 대화체는 한국어 대화체로 자연스럽게 변환
 
-[출력 형식 예시]
-입력: "Hello---How are you?---Thank you"
-출력: "안녕하세요---어떻게 지내세요?---감사합니다"
+[출력 형식]
+번역1###SEGMENT###번역2###SEGMENT###번역3###SEGMENT###...###SEGMENT###번역{len(segments)}
 
-[입력 텍스트]
+[입력 세그먼트]
 {segments_text}
 
-[번역 출력 (번역문만, 원문 포함하지 말 것)]"""
+번역 시작:"""
 
         try:
             # Use cost-optimized translation model (Flash)
@@ -306,16 +308,16 @@ class GeminiService(BaseAIService):
 
             # Split result by separator
             translated_text = response.text.strip()
-            translations = [t.strip() for t in translated_text.split("---")]
+            translations = [t.strip() for t in translated_text.split("###SEGMENT###")]
 
             # Validate count
             if len(translations) != len(segments):
-                logger.warning(
+                logger.error(
                     f"Translation count mismatch: expected {len(segments)}, got {len(translations)}"
                 )
-                # Pad with originals if too few
+                # Pad with empty strings if too few (NOT original text)
                 while len(translations) < len(segments):
-                    translations.append(segments[len(translations)])
+                    translations.append("")
                 # Truncate if too many
                 translations = translations[:len(segments)]
 
