@@ -25,7 +25,11 @@ class Settings(BaseSettings):
         return [
             self.FRONTEND_URL,
             "http://localhost:8080",
-            "http://localhost:5173"
+            "http://localhost:5173",
+            # Vercel deployments
+            "https://insightfind-alpha.vercel.app",
+            "https://insightfind-git-main-jklb739s-projects.vercel.app",
+            "https://insightfind-jjtpe70hb-jklb739s-projects.vercel.app"
         ]
 
     # AI Provider Selection
